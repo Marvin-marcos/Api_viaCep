@@ -23,9 +23,11 @@ class SharedPreferencesService {
   Future<bool> saveInt(String key, int value) async {
     try {
       bool result = await _preferences!.setInt(key, value);
+
       return result;
     } catch (erro) {
       debugPrint("Falha ao salvar inteiro: $erro");
+
       return false;
     }
   }
@@ -33,19 +35,11 @@ class SharedPreferencesService {
   Future<bool> saveString(String key, String value) async {
     try {
       bool result = await _preferences!.setString(key, value);
+
       return result;
     } catch (erro) {
       debugPrint("Falha ao salvar string: $erro");
-      return false;
-    }
-  }
-
-  Future<bool> saveBool(String key, bool value) async {
-    try {
-      bool result = await _preferences!.setBool(key, value);
-      return result;
-    } catch (erro) {
-      debugPrint("Falha ao salvar bool: $erro");
+      
       return false;
     }
   }
@@ -60,12 +54,22 @@ class SharedPreferencesService {
     }
   }
 
-  Future<bool> saveList(String key, List<String> value) async {
+  Future<bool> saveBool(String key, bool value) async {
+    try {
+      bool result = await _preferences!.setBool(key, value);
+      return result;
+    } catch (erro) {
+      debugPrint("Falha ao salvar bool: $erro");
+      return false;
+    }
+  }
+
+  Future<bool> saveStringList(String key, List<String> value) async {
     try {
       bool result = await _preferences!.setStringList(key, value);
       return result;
     } catch (erro) {
-      debugPrint("Falha ao salvar list: $erro");
+      debugPrint("Falha ao salvar a lista de strings: $erro");
       return false;
     }
   }
@@ -83,7 +87,7 @@ class SharedPreferencesService {
     try {
       return _preferences!.getString(key);
     } catch (erro) {
-      debugPrint("Impossível ler o valor do string: $erro");
+      debugPrint("Impossível ler o valor da string: $erro");
       return null;
     }
   }
@@ -92,7 +96,7 @@ class SharedPreferencesService {
     try {
       return _preferences!.getBool(key);
     } catch (erro) {
-      debugPrint("Impossível ler o valor do bool: $erro");
+      debugPrint("Impossível ler o valor do booleano: $erro");
       return null;
     }
   }
@@ -130,6 +134,7 @@ class SharedPreferencesService {
       return await _preferences!.clear();
     } catch (erro) {
       debugPrint("Erro ao limpar o LocalStorage: $erro");
+
       return false;
     }
   }

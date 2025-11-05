@@ -12,20 +12,20 @@ class Endereco {
     this.logradouro,
     this.complemento,
     this.bairro,
+    this.estado,
     this.localidade,
     this.uf,
-    this.estado,
   });
 
   factory Endereco.fromJson(Map<String, dynamic> json) {
     return Endereco(
-      cep: json['cep'],
-      logradouro: json['logradouro'],
-      complemento: json['complemento'],
-      bairro: json['bairro'],
-      localidade: json['localidade'],
-      uf: json['uf'],
-      estado: json['estado'],
+      cep: json["cep"],
+      logradouro: json["logradouro"],
+      complemento: json["complemento"],
+      bairro: json["bairro"],
+      estado: json["estado"],
+      localidade: json["localidade"],
+      uf: json["uf"],
     );
   }
 }

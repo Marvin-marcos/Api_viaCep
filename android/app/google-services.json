@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "973253184793",
-    "project_id": "userfirebase-cf69a",
-    "storage_bucket": "userfirebase-cf69a.firebasestorage.app"
+    "project_number": "720472570252",
+    "project_id": "apiviacep",
+    "storage_bucket": "apiviacep.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:973253184793:android:127b86fab138f7ef3f0988",
+        "mobilesdk_app_id": "1:720472570252:android:cbb2ebea0f4a80400dfea9",
         "android_client_info": {
           "package_name": "com.example.api_consumo"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyChyJSNV6CaQd2u9YWWSapUGqvOEY3HCLg"
+          "current_key": "AIzaSyBq4LFPNTE6XdvW8ze4vob_SwOIVT20sqo"
         }
       ],
       "services": {
