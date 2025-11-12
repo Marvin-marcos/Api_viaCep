@@ -7,7 +7,7 @@ class ConnectivityService {
 
   StreamController? _connectivityController;
 
-  void initialize() {
+  initialize() {
     _connectivityController = StreamController.broadcast();
 
     checkconnectivity();
@@ -26,7 +26,7 @@ class ConnectivityService {
 
       bool resultStatusConnection = _verifyConnectionStatus(listResult);
       return resultStatusConnection;
-    } catch (e) {
+    } catch (erro) {
       throw Exception("Erro ao checar conectividade do usuário");
     }
   }
@@ -40,15 +40,14 @@ class ConnectivityService {
 
       return false;
     }
-
-    print("Conectado");
+    print("conectado!!");
 
     for (var result in listResult) {
       if (result == ConnectivityResult.wifi) {
-        print("Wifi está ativo");
+        print('wifi ativado');
       }
       if (result == ConnectivityResult.mobile) {
-        print("Dados móveis está ativo");
+        print('Dados móveis ativados');
       }
     }
     _connectivityController?.add(true);
@@ -58,9 +57,11 @@ class ConnectivityService {
   Stream get connectivityStream {
     if (_connectivityController == null) {
       initialize();
+
     }
 
     return _connectivityController!.stream;
+
   }
 
   void dispose() {

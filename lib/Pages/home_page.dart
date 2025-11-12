@@ -1,9 +1,10 @@
-
+import 'dart:async';
+import 'package:api_consumo/Pages/connectivivy_page.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:api_consumo/Models/endereco_model.dart';
-import 'package:api_consumo/Services/via_cep_service.dart';
-import 'package:api_consumo/Pages/mapa_page.dart';
+import '../services/cep_service.dart';
+import '../services/storage_service.dart';
+import '../services/connectivity_service.dart';
+import '../models/cep_model.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -12,230 +13,231 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
+@override
+  // ignore: library_private_types_in_public_api
+  _ConnectivityPageState createState() => _ConnectivityPageState();
   
-  TextEditingController controllerCep = TextEditingController();
-  TextEditingController controllerLogradouro = TextEditingController();
-  TextEditingController controllerComplemento = TextEditingController();
-  TextEditingController controllerBairro = TextEditingController();
-  TextEditingController controllerCidade = TextEditingController();
-  TextEditingController controllerEstado = TextEditingController();
+class _ConnectivityPageState extends State<ConnectivityPage> {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text("Status de Conectividade")),
+      body: Center(child: Column(children: [Icon(Icons.wifi)])),
+    );
+  }
+}
 
-  Endereco? endereco;
+class _HomePageState extends State<HomePage> {
+  final cepController = TextEditingController();
+  final cepService = CepService();
+  final storageService = StorageService();
+  final connectivityService = ConnectivityService();
+
+  bool isOnline = false;
   bool isLoading = false;
 
-  ViaCepService viaCepService = ViaCepService();
+  List<CepModel> savedCeps = [];
 
-  Future<void> buscarCep(String cep) async {
-    clearControllers();
-    setState(() {
-      isLoading = true;
-    });
-    try {
-      Endereco? response = await viaCepService.buscarEndereco(cep);
+  StreamSubscription<bool>? connSub;
 
-      if (response?.localidade == null) {
-        showDialog(
-          context: context,
-          builder: (context) {
-            return AlertDialog(
-              icon: Icon(Icons.warning, color: Colors.orange, size: 40),
-              title: Text("Atenção", style: TextStyle(fontWeight: FontWeight.bold)),
-              content: Text("Cep não encontrado"),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: Text("OK"),
-                ),
-              ],
-            );
-          },
-        );
-        controllerCep.clear();
-        return;
-      }
 
-      setState(() {
-        endereco = response;
-      });
 
-      setControllersCep(endereco!);
-    } catch (erro) {
-      throw Exception("Erro ao buscar CEP: $erro");
-    } finally {
-      setState(() {
-        isLoading = false;
-      });
+
+  String _sanitizeCep(String cep) {
+    return cep.replaceAll(RegExp(r'[^0-9]'), '');
+  }
+
+  Future<void> consultCep() async {
+    final cep = _sanitizeCep(cepController.text.trim());
+
+    if (cep.isEmpty || cep.length != 8) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Digite um CEP válido (8 números).")),
+      );
+      return;
     }
-  }
 
-  void setControllersCep(Endereco endereco) {
-    controllerLogradouro.text = endereco.logradouro ?? '';
-    controllerComplemento.text = endereco.complemento ?? '';
-    controllerBairro.text = endereco.bairro ?? '';
-    controllerCidade.text = endereco.localidade ?? '';
-    controllerEstado.text = endereco.estado ?? '';
-  }
+    setState(() => isLoading = true);
 
-  void clearControllers() {
-    controllerBairro.clear();
-    controllerLogradouro.clear();
-    controllerCidade.clear();
-    controllerComplemento.clear();
-    controllerEstado.clear();
-  }
+    CepModel? model;
 
-  InputDecoration customInputDecoration(String label) {
-    return InputDecoration(
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-      labelText: label,
-      filled: true,
-      fillColor: Colors.grey[100],
+    if (isOnline) {
+      model = await cepService.fetchCepFromApi(cep);
+      if (model != null) {
+        await storageService.saveCep(model);
+        setState(() => savedCeps = storageService.getAllCeps());
+      }
+    } else {
+      model = storageService.getCep(cep);
+    }
+
+    setState(() => isLoading = false);
+
+    if (model == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text(isOnline
+                ? 'CEP não encontrado na API.'
+                : 'CEP não encontrado localmente (modo offline).')),
+      );
+      return;
+    }
+
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text("CEP: ${model!.cep}"),
+        content: Text(
+            "${model.logradouro}\n${model.bairro}\n${model.localidade} - ${model.uf}"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Fechar"),
+          )
+        ],
+      ),
     );
   }
 
-    @override
-    Widget build(BuildContext context) {
-      return Scaffold(
-        backgroundColor: Colors.blue[50],
-        appBar: AppBar(
-          backgroundColor: Colors.blue[700],
-          title: Text("ViaCEP Api", style: TextStyle(color: Colors.white)),
-          centerTitle: true,
-          elevation: 2,
-        ),
-        body: Center(
-          child: SingleChildScrollView(
-            child: Container(
-              padding: const EdgeInsets.all(28),
-              margin: const EdgeInsets.symmetric(horizontal: 18, vertical: 30),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(18),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.blue.withOpacity(0.08),
-                    blurRadius: 16,
-                    offset: Offset(0, 8),
-                  ),
-                ],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    "Consulta de CEP",
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.blue[700],
-                    ),
-                  ),
-                  SizedBox(height: 24),
-                  TextField(
-                    onChanged: (valor) {
-                      if (valor.isEmpty) {
-                        setState(() {
-                          endereco = null;
-                        });
-                        clearControllers();
-                      }
-                    },
-                    controller: controllerCep,
-                    maxLength: 8,
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    keyboardType: TextInputType.number,
-                    decoration: customInputDecoration("CEP").copyWith(
-                      suffixIcon: isLoading
-                          ? Padding(
-                              padding: const EdgeInsets.all(10),
-                              child: SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              ),
-                            )
-                          : null,
-                    ),
-                  ),
-                  SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue[700],
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        padding: EdgeInsets.symmetric(vertical: 14),
-                      ),
-                      onPressed: isLoading
-                          ? null
-                          : () {
-                              buscarCep(controllerCep.text);
-                            },
-                      icon: Icon(Icons.search, color: Colors.white),
-                      label: Text(
-                        "Buscar CEP",
-                        style: TextStyle(fontSize:16, color: Colors.white),
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: 24),
-                  if (endereco?.bairro != null)
-                    Column(
-                      children: [
-                        TextField(
-                          controller: controllerLogradouro,
-                          decoration: customInputDecoration("Logradouro"),
-                          readOnly: true,
-                        ),
-                        SizedBox(height: 12),
-                        TextField(
-                          controller: controllerComplemento,
-                          decoration: customInputDecoration("Complemento"),
-                          readOnly: true,
-                        ),
-                        SizedBox(height: 12),
-                        TextField(
-                          controller: controllerBairro,
-                          decoration: customInputDecoration("Bairro"),
-                          readOnly: true,
-                        ),
-                        SizedBox(height: 12),
-                        TextField(
-                          controller: controllerCidade,
-                          decoration: customInputDecoration("Cidade"),
-                          readOnly: true,
-                        ),
-                        SizedBox(height: 12),
-                        TextField(
-                          controller: controllerEstado,
-                          decoration: customInputDecoration("Estado"),
-                          readOnly: true,
-                        ),
-                        SizedBox(height: 20),
-                        ElevatedButton(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => MapaPage(
-                                  latitude: -23.55052, // substituir pelos valores reais do CEP
-                                  longitude: -46.633308,
-                                ),
-                              ),
-                            );
-                          },
-                          child: const Text('Ver no mapa'),
-                        ),
-                      ],
-                    ),
-                ],
+  @override
+  void dispose() {
+    connSub?.cancel();
+    cepController.dispose();
+    connectivityService.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Consulta CEP"),
+        actions: [
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: isOnline ? Colors.green : Colors.red,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  isOnline ? Icons.wifi : Icons.wifi_off,
+                  color: Colors.white,
+                  size: 18,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  isOnline ? "Online" : "Offline",
+                  style: const TextStyle(color: Colors.white),
+                ),
+              ],
+            ),
+          )
+        ],
+      ),
+
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            TextField(
+              controller: cepController,
+              keyboardType: TextInputType.number,
+              maxLength: 8,
+              decoration: InputDecoration(
+                labelText: "CEP",
+                hintText: "Digite o CEP (somente números)",
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.clear),
+                  onPressed: () => cepController.clear(),
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                counterText: "",
               ),
             ),
-          ),
+
+            const SizedBox(height: 12),
+
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: isLoading ? null : consultCep,
+                icon: const Icon(Icons.search),
+                label: Text(isLoading ? "Buscando..." : "Consultar"),
+              ),
+            ),
+
+            if (!isOnline)
+              const Padding(
+                padding: EdgeInsets.only(top: 8.0),
+                child: Text(
+                  "Modo Offline: buscando apenas CEPs salvos.",
+                  style: TextStyle(color: Colors.red),
+                ),
+              ),
+
+            const SizedBox(height: 20),
+
+            const Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                "CEPs Salvos:",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+            ),
+
+            const SizedBox(height: 8),
+
+            Expanded(
+              child: savedCeps.isEmpty
+                  ? const Center(
+                      child: Text(
+                        "Nenhum CEP salvo ainda",
+                        style: TextStyle(fontSize: 16),
+                      ),
+                    )
+                  : ListView.builder(
+                      itemCount: savedCeps.length,
+                      itemBuilder: (_, i) {
+                        final c = savedCeps[i];
+
+                        return Card(
+                          elevation: 2,
+                          child: ListTile(
+                            leading: const Icon(Icons.location_on),
+                            title: Text(c.cep),
+                            subtitle: Text(
+                                "${c.logradouro}\n${c.localidade} - ${c.uf}"),
+                            isThreeLine: true,
+                            onTap: () {
+                              showDialog(
+                                context: context,
+                                builder: (_) => AlertDialog(
+                                  title: Text("CEP: ${c.cep}"),
+                                  content: Text(
+                                      "${c.logradouro}\n${c.bairro}\n${c.localidade} - ${c.uf}"),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () =>
+                                          Navigator.pop(context),
+                                      child: const Text("Fechar"),
+                                    )
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ],
         ),
-      );
-    }
+      ),
+    );
   }
+}
